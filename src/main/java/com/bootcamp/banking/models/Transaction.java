@@ -3,8 +3,13 @@ package com.bootcamp.banking.models;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "transactions")
 public class Transaction {
 
+    @Id
     private String transactionId;
     private String accountId;
     private String type;

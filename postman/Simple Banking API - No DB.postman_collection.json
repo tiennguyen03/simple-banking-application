@@ -1,38 +1,53 @@
 {
   "info": {
     "_postman_id": "fdd4866d-721a-4853-91da-bd874e4d781c",
-    "name": "Simple Banking API - No DB",
+    "name": "Tien Nguyen Simple Banking API - MongoDB",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "46635901",
     "_collection_link": "https://go.postman.co/collection/46635901-fdd4866d-721a-4853-91da-bd874e4d781c?source=collection_link"
   },
   "item": [
     {
+      "name": "Create Customer",
+      "event": [{
+        "listen": "test",
+        "script": {"exec": [
+          "pm.test('Customer created', () => pm.response.to.have.status(201));",
+          "const body = pm.response.json();",
+          "pm.collectionVariables.set('customerId', body.id);"
+        ]}
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"name\": \"Tien Nguyen\"\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{baseUrl}}/api/customers"
+      },
+      "response": []
+    },
+    {
       "name": "Create Account",
+      "event": [{
+        "listen": "test",
+        "script": {"exec": [
+          "pm.test('Primary account created', () => pm.response.to.have.status(201));",
+          "const body = pm.response.json();",
+          "pm.collectionVariables.set('accountId', body.accountId);"
+        ]}
+      }],
       "request": {
         "method": "POST",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"userId\": \"1\",\r\n  \"accountType\": \"SAVINGS\"\r\n}",
+          "raw": "{\r\n  \"userId\": \"{{customerId}}\",\r\n  \"accountType\": \"SAVINGS\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
         },
-        "url": {
-          "raw": "http://localhost:8080/api/accounts",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "accounts"
-          ]
-        }
+        "url": "{{baseUrl}}/api/accounts"
       },
       "response": []
     },
@@ -41,19 +56,7 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": {
-          "raw": "http://localhost:8080/api/accounts/1",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "accounts",
-            "1"
-          ]
-        }
+        "url": "{{baseUrl}}/api/accounts/{{accountId}}"
       },
       "response": []
     },
@@ -71,20 +74,7 @@
             }
           }
         },
-        "url": {
-          "raw": "http://localhost:8080/api/accounts/1/deposit",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "accounts",
-            "1",
-            "deposit"
-          ]
-        }
+        "url": "{{baseUrl}}/api/accounts/{{accountId}}/deposit"
       },
       "response": []
     },
@@ -102,20 +92,7 @@
             }
           }
         },
-        "url": {
-          "raw": "http://localhost:8080/api/accounts/1/withdraw",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "accounts",
-            "1",
-            "withdraw"
-          ]
-        }
+        "url": "{{baseUrl}}/api/accounts/{{accountId}}/withdraw"
       },
       "response": []
     },
@@ -124,22 +101,104 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": {
-          "raw": "http://localhost:8080/api/accounts/1/transactions",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "accounts",
-            "1",
-            "transactions"
-          ]
-        }
+        "url": "{{baseUrl}}/api/accounts/{{accountId}}/transactions"
       },
       "response": []
+    },
+    {
+      "name": "Create Destination Account",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Destination account created', () => pm.response.to.have.status(201));",
+        "pm.collectionVariables.set('destinationAccountId', pm.response.json().accountId);"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"userId\": \"{{customerId}}\",\n  \"accountType\": \"CHECKING\"\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{baseUrl}}/api/accounts"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Accounts For Customer",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Customer has multiple accounts', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().length).to.be.at.least(2); });"
+      ]}}],
+      "request": {"method": "GET", "header": [], "url": "{{baseUrl}}/api/accounts?userId={{customerId}}"},
+      "response": []
+    },
+    {
+      "name": "Get Premium Accounts",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Premium results meet threshold', () => { pm.response.to.have.status(200); pm.response.json().forEach(a => pm.expect(a.balance).to.be.at.least(100)); });"
+      ]}}],
+      "request": {"method": "GET", "header": [], "url": "{{baseUrl}}/api/accounts/premium?threshold=100"},
+      "response": []
+    },
+    {
+      "name": "Transfer Money",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Transfer succeeded', () => pm.response.to.have.status(200));",
+        "pm.test('Both account states returned', () => { const b = pm.response.json(); pm.expect(b.fromAccount).to.exist; pm.expect(b.toAccount).to.exist; });"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"fromAccountId\": \"{{accountId}}\",\n  \"toAccountId\": \"{{destinationAccountId}}\",\n  \"amount\": 100\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{baseUrl}}/api/accounts/transfer"
+      },
+      "response": []
+    },
+    {
+      "name": "Reject Same Account Transfer",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Unsafe transfer rejected', () => pm.response.to.have.status(400));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"fromAccountId\": \"{{accountId}}\",\n  \"toAccountId\": \"{{accountId}}\",\n  \"amount\": 50\n}", "options": {"raw": {"language": "json"}}},
+        "url": "{{baseUrl}}/api/accounts/transfer"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Audits",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Audit records returned', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().length).to.be.above(0); });",
+        "pm.test('Rejected operation was audited', () => pm.expect(pm.response.json().some(a => a.status === 'REJECTED')).to.be.true);"
+      ]}}],
+      "request": {"method": "GET", "header": [], "url": "{{baseUrl}}/api/audits"},
+      "response": []
+    },
+    {
+      "name": "Get Account Audits",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('Account audit trail returned', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().length).to.be.above(0); });"
+      ]}}],
+      "request": {"method": "GET", "header": [], "url": "{{baseUrl}}/api/audits/account/{{accountId}}"},
+      "response": []
+    },
+    {
+      "name": "Delete Primary Account",
+      "request": {"method": "DELETE", "header": [], "url": "{{baseUrl}}/api/accounts/{{accountId}}"},
+      "response": []
+    },
+    {
+      "name": "Delete Destination Account",
+      "request": {"method": "DELETE", "header": [], "url": "{{baseUrl}}/api/accounts/{{destinationAccountId}}"},
+      "response": []
+    },
+    {
+      "name": "Delete Customer",
+      "request": {"method": "DELETE", "header": [], "url": "{{baseUrl}}/api/customers/{{customerId}}"},
+      "response": []
     }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080"},
+    {"key": "customerId", "value": ""},
+    {"key": "accountId", "value": ""},
+    {"key": "destinationAccountId", "value": ""}
   ]
 }

@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import com.bootcamp.banking.models.Customer;
 import com.bootcamp.banking.services.CustomerService;
@@ -37,9 +39,13 @@ public class CustomerController {
     public ResponseEntity<Customer> createCustomer(
             @RequestBody Customer customer ) {
 
-        Customer createdCustomer = customerService.createCustomer(customer);
+        try {
+            Customer createdCustomer = customerService.createCustomer(customer);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdCustomer);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdCustomer);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
+        }
 
 
     }
@@ -53,6 +59,38 @@ public class CustomerController {
         }
 
         return ResponseEntity.ok(customer);
+    }
+
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<Customer> updateCustomer(
+            @PathVariable String id,
+            @RequestBody Customer customerRequest) {
+
+        try {
+            Customer customer =
+                    customerService.updateCustomer(id, customerRequest);
+
+            if (customer == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(customer);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/customers/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable String id) {
+        try {
+            if (!customerService.deleteCustomer(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
     }
 
 }
