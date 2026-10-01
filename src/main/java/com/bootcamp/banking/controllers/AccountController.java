@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.bootcamp.banking.services.AccountAccess;
 
 import com.bootcamp.banking.models.Account;
 import com.bootcamp.banking.models.Transaction;
@@ -28,12 +30,15 @@ import com.bootcamp.banking.services.AccountService;
 public class AccountController {
 
     private final AccountService accountService;
+    private final AccountAccess accountAccess;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, AccountAccess accountAccess) {
         this.accountService = accountService;
+        this.accountAccess = accountAccess;
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Account> createAccount(
             @RequestBody Account accountRequest) {
 
@@ -52,9 +57,17 @@ public class AccountController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     public ResponseEntity<List<Account>> getAccounts(
             @RequestParam(required = false) String userId) {
 
+        if (!accountAccess.currentIsAdmin()) {
+            String customerId = accountAccess.currentCustomerId();
+            if (customerId == null || (userId != null && !userId.isBlank() && !userId.equals(customerId))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            return ResponseEntity.ok(accountService.getAccountsByUserId(customerId));
+        }
         if (userId == null || userId.isBlank()) {
             return ResponseEntity.ok(accountService.getAllAccounts());
         }
@@ -64,6 +77,7 @@ public class AccountController {
     }
 
     @GetMapping("/premium")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Account>> getPremiumAccounts(
             @RequestParam BigDecimal threshold) {
         try {
@@ -75,6 +89,7 @@ public class AccountController {
     }
 
     @PostMapping("/transfer")
+    @PreAuthorize("@accountAccess.account(authentication, #request.fromAccountId) and @accountAccess.account(authentication, #request.toAccountId)")
     public ResponseEntity<TransferResponse> transfer(
             @RequestBody TransferRequest request) {
         try {
@@ -89,6 +104,7 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@accountAccess.account(authentication, #id)")
     public ResponseEntity<Account> getAccountById(
             @PathVariable String id) {
 
@@ -102,6 +118,7 @@ public class AccountController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Account> updateAccount(
             @PathVariable String id,
             @RequestBody Account accountRequest) {
@@ -121,6 +138,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteAccount(@PathVariable String id) {
         if (!accountService.deleteAccount(id)) {
             return ResponseEntity.notFound().build();
@@ -130,6 +148,7 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/deposit")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Account> deposit(
             @PathVariable String id,
             @RequestBody AmountRequest request) {
@@ -149,6 +168,7 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/withdraw")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Account> withdraw(
             @PathVariable String id,
             @RequestBody AmountRequest request) {
@@ -168,6 +188,7 @@ public class AccountController {
     }
 
     @GetMapping("/{id}/transactions")
+    @PreAuthorize("@accountAccess.account(authentication, #id)")
     public ResponseEntity<List<Transaction>> getTransactions(
             @PathVariable String id) {
 

@@ -2,6 +2,7 @@ package com.bootcamp.banking.controllers;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api")
+@PreAuthorize("hasRole('ADMIN')")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -51,6 +53,7 @@ public class CustomerController {
     }
 
     @GetMapping("/customers/{id}")
+    @PreAuthorize("@accountAccess.customer(authentication, #id)")
     public ResponseEntity<Customer> getCustomerById(@PathVariable String id) {
         Customer customer = customerService.getCustomerById(id);
 
